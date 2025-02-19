@@ -124,11 +124,14 @@ def build_pipeline():
         ]
     )
 
+    k_best = SelectKBest(f_regression, k=10)
+    model = LinearRegression()
+
     pipeline = Pipeline(
         steps=[
             ("preprocessor", preprocessor),
-            ("k_best", SelectKBest(f_regression, k=10)),
-            ("model", LinearRegression),
+            ("k_best", k_best),
+            ("model", model),
         ]
     )
 
