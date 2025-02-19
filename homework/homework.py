@@ -1,3 +1,6 @@
+import pandas as pd
+import zipfile
+
 #
 # En este dataset se desea pronosticar el precio de vhiculos usados. El dataset
 # original contiene las siguientes columnas:
@@ -24,6 +27,33 @@
 # - Cree la columna 'Age' a partir de la columna 'Year'.
 #   Asuma que el año actual es 2021.
 # - Elimine las columnas 'Year' y 'Car_Name'.
+
+
+def clean_dataset(path):
+    """Carga y limpia los datasets."""
+    with zipfile.ZipFile(path, "r") as z:
+        csv_file = z.namelist()[0]
+        with z.open(csv_file) as f:
+            df = pd.read_csv(f)
+
+    df.dropna(inplace=True)
+    df["Age"] = 2021 - df["Year"]
+    df.drop_duplicates()
+    df.drop(columns=["Year", "Car_Name"])
+
+    return df
+
+
+# Cargar datasets
+df_test = clean_dataset("./files/input/test_data.csv.zip")
+df_train = clean_dataset("./files/input/train_data.csv.zip")
+
+# Separar variables
+x_train = df_train.drop(columns=["Present_Price"])
+y_train = df_train["Present_Price"]
+
+x_test = df_test.drop(columns=["Present_Price"])
+y_test = df_test["Present_Price"]
 #
 #
 # Paso 2.
@@ -61,3 +91,54 @@
 # {'type': 'metrics', 'dataset': 'train', 'r2': 0.8, 'mse': 0.7, 'mad': 0.9}
 # {'type': 'metrics', 'dataset': 'test', 'r2': 0.7, 'mse': 0.6, 'mad': 0.8}
 #
+
+import json
+
+from sklearn.metrics import (
+    balanced_accuracy_score,
+    confusion_matrix,
+    f1_score,
+    precision_score,
+    recall_score,
+)
+
+
+def evaluate_model(
+    model, x_train, y_train, x_test, y_test, file_path="files/output/metrics.json"
+):
+    """Evalúa el modelo en los conjuntos de entrenamiento y prueba y guarda las métricas."""
+    os.makedirs(os.path.dirname(file_path), exist_ok=True)
+
+    with open(file_path, "w") as f:
+        for dataset, (x, y) in zip(
+            ["train", "test"], [(x_train, y_train), (x_test, y_test)]
+        ):
+            y_pred = model.predict(x)
+            metrics_train = {
+                "type": "metrics",
+                "dataset": "train",
+                "r2": float(r2_score(y, y_pred)),
+                "mse": float(mean_squared_error(y, y_pred)),
+                "mad": float(median_absolute_error(y_pred, y_train_pred)),
+            }
+
+    # Calcular métricas para el conjunto de prueba
+    metrics_test = {
+        "type": "metrics",
+        "dataset": "test",
+        "r2": float(r2_score(y_test, y_test_pred)),
+        "mse": float(mean_squared_error(y_test, y_test_pred)),
+        "mad": float(median_absolute_error(y_test, y_test_pred)),
+    }
+
+    # Crear carpeta si no existe
+    output_dir = "../files/output"
+    os.makedirs(output_dir, exist_ok=True)
+
+    # Guardar las métricas en un archivo JSON
+    output_path = os.path.join(output_dir, "metrics.json")
+    with open(output_path, "w") as f:  # Usar 'w' para comenzar con un archivo limpio
+        f.write(json.dumps(metrics_train) + "\n")
+        f.write(json.dumps(metrics_test) + "\n")
+
+    print(f"Métricas guardadas en {file_path}")
