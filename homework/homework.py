@@ -72,7 +72,7 @@ import gzip
 import pandas as pd
 from sklearn.pipeline import Pipeline
 from sklearn.compose import ColumnTransformer
-from sklearn.preprocessing import OneHotEncoder, StandardScaler
+from sklearn.preprocessing import OneHotEncoder, MinMaxScaler
 from sklearn.feature_selection import SelectKBest, f_regression
 from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import GridSearchCV
@@ -120,18 +120,15 @@ def build_pipeline():
     preprocessor = ColumnTransformer(
         transformers=[
             ("cat", OneHotEncoder(), categorical_features),
-            ("num", StandardScaler(), numeric_features),
+            ("num", MinMaxScaler(), numeric_features),
         ]
     )
-
-    k_best = SelectKBest(f_regression, k=10)
-    model = LinearRegression()
 
     pipeline = Pipeline(
         steps=[
             ("preprocessor", preprocessor),
-            ("k_best", k_best),
-            ("model", model),
+            ("k_best", SelectKBest(f_regression, k=10)),
+            ("model", LinearRegression),
         ]
     )
 
